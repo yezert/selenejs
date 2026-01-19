@@ -1,0 +1,26 @@
+{
+  "name": "selenejs",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Modern UI framework with Rust power",
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "examples/*"
+  ],
+  "scripts": {
+    "dev": "cd packages/core && npm run dev",
+    "build": "cd packages/core && npm run build",
+    "example": "cd examples/basic && npm run dev",
+    "test": "cd packages/core && npm run test"
+  },
+  "devDependencies": {
+    "@swc/core": "^1.15.8",
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3",
+    "vitest": "^1.0.0"
+  },
+  "dependencies": {
+    "vite": "^7.3.1"
+  }
+}

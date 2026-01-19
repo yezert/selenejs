@@ -1,0 +1,23 @@
+{
+    "name": "@selene/core",
+    "version": "0.0.1",
+    "type": "module",
+    "main": "./dist/index.js",
+    "module": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "scripts": {
+      "build": "npx tsup --config src/tsup.config.js && node scripts/copy-rust.mjs",
+      "build:wasm": "cd ../../crates/core && wasm-pack build --target web --out-dir ../../packages/core/src/rust",
+      "dev": "npx tsup --config src/tsup.config.js --watch",
+      "test": "npx vitest"
+    },
+    "files": [
+      "dist",
+      "src/rust"
+    ],
+    "devDependencies": {
+      "tsup": "^8.0.0",
+      "typescript": "^5.0.0",
+      "vitest": "^1.0.0"
+    }
+  }

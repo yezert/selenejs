@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>烟花形成2026特效</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background-color: #000;
+            color: white;
+            font-family: 'Arial', sans-serif;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        #canvasContainer {
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+        
+        #fireworksCanvas {
+            display: block;
+            background-color: #000;
+        }
+        
+        .controls {
+            position: absolute;
+            bottom: 30px;
+            left: 0;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            z-index: 10;
+            gap: 15px;
+        }
+        
+        button {
+            padding: 12px 24px;
+            background: linear-gradient(to right, #ff5e00, #ffbb00);
+            border: none;
+            border-radius: 50px;
+            color: #000;
+            font-weight: bold;
+            font-size: 16px;
+            cursor: pointer;
+            transition: transform 0.3s, box-shadow 0.3s;
+            box-shadow: 0 5px 15px rgba(255, 94, 0, 0.5);
+        }
+        
+        button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(255, 94, 0, 0.7);
+        }
+        
+        .info {
+            position: absolute;
+            top: 30px;
+            left: 0;
+            width: 100%;
+            text-align: center;
+            z-index: 10;
+        }
+        
+        h1 {
+            font-size: 3.5rem;
+            margin-bottom: 10px;
+            background: linear-gradient(to right, #ff5e00, #ffbb00, #00aaff, #ff00cc);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+        }
+        
+        .subtitle {
+            font-size: 1.2rem;
+            color: #aaa;
+            margin-bottom: 20px;
+        }
+        
+        .instructions {
+            position: absolute;
+            top: 150px;
+            left: 0;
+            width: 100%;
+            text-align: center;
+            color: #88aaff;
+            font-size: 1.1rem;
+            z-index: 10;
+        }
+    </style>
+</head>
+<body>
+    <div id="canvasContainer">
+        <canvas id="fireworksCanvas"></canvas>
+        <div class="info">
+            <h1>烟花形成2026</h1>
+            <div class="subtitle">点击屏幕任意位置发射烟花，点击下方按钮查看特效</div>
+        </div>
+        <div class="instructions">烟花爆炸后，粒子将组合成"2026"数字形状</div>
+        <div class="controls">
+            <button id="btn2026">显示2026烟花</button>
+            <button id="btnRandom">随机烟花</button>
+            <button id="btnClear">清除所有</button>
+        </div>
+    </div>
+
+    <script>
+        // 获取Canvas元素和上下文
+        const canvas = document.getElementById('fireworksCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // 设置Canvas尺寸为窗口大小
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        
+        // 当窗口大小改变时，调整Canvas尺寸
+        window.addEventListener('resize', function() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
+        
+        // 烟花粒子类
+        class Particle {
+            constructor(x, y, color, targetX, targetY, isFromFirework = false) {
+                this.x = x;
+                this.y = y;
+                this.color = color;
+                this.alpha = 1; // 透明度
+                this.decay = Math.random() * 0.02 + 0.005; // 衰减速度
+                this.size = Math.random() * 2 + 1; // 粒子大小
+                this.speed = isFromFirework ? Math.random() * 5 + 2 : Math.random() * 3 + 1; // 速度
+                
+                // 如果是从烟花爆炸产生的，有随机方向
+                if (isFromFirework) {
+                    this.angle = Math.random() * Math.PI * 2;
+                    this.vx = Math.cos(this.angle) * this.speed;
+                    this.vy = Math.sin(this.angle) * this.speed;
+                    this.friction = 0.95; // 摩擦力
+                    this.gravity = 0.2; // 重力
+                    this.hasTarget = false;
+                } else {
+                    // 如果是用于形成数字的粒子，有目标位置
+                    this.targetX = targetX;
+                    this.targetY = targetY;
+                    this.vx = 0;
+                    this.vy = 0;
+                    this.hasTarget = true;
+                    this.moveToTarget = false; // 初始时不移动向目标
+                    this.moveStartTime = 0; // 开始移动的时间
+                    this.moveDelay = Math.random() * 1000 + 500; // 延迟时间
+                }
+                
+                this.life = 1; // 生命周期
+            }
+            
+            update() {
+                if (this.hasTarget) {
+                    // 数字粒子逻辑
+                    if (!this.moveToTarget) {
+                        // 等待一段时间后开始移动
+                        if (!this.moveStartTime) {
+                            this.moveStartTime = Date.now();
+                        }
+                        
+                        if (Date.now() - this.moveStartTime > this.moveDelay) {
+                            this.moveToTarget = true;
+                        }
+                    } else {
+                        // 向目标位置移动
+                        const dx = this.targetX - this.x;
+                        const dy = this.targetY - this.y;
+                        const distance = Math.sqrt(dx * dx + dy * dy);
+                        
+                        if (distance > 1) {
+                            // 如果距离目标大于1像素，继续移动
+                            this.vx = dx * 0.05;
+                            this.vy = dy * 0.05;
+                            this.x += this.vx;
+                            this.y += this.vy;
+                        } else {
+                            // 到达目标位置
+                            this.x = this.targetX;
+                            this.y = this.targetY;
+                        }
+                    }
+                } else {
+                    // 烟花爆炸粒子逻辑
+                    this.vx *= this.friction;
+                    this.vy *= this.friction;
+                    this.vy += this.gravity;
+                    this.x += this.vx;
+                    this.y += this.vy;
+                }
+                
+                this.alpha -= this.decay;
+                this.life -= this.decay;
+                
+                // 如果粒子太小或透明度太低，标记为死亡
+                return this.life > 0 && this.alpha > 0;
+            }
+            
+            draw() {
+                ctx.save();
+                ctx.globalAlpha = this.alpha;
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+        
+        // 烟花类
+        class Firework {
+            constructor(x, y, targetX, targetY, color, createNumber = false) {
+                this.x = x;
+                this.y = y;
+                this.startX = x;
+                this.startY = y;
+                this.targetX = targetX;
+                this.targetY = targetY;
+                this.color = color;
+                this.createNumber = createNumber; // 是否创建数字
+                
+                // 烟花弹道属性
+                this.speed = 8;
+                this.acceleration = 1.05;
+                this.brightness = 1;
+                this.trail = [];
+                this.trailLength = 5;
+                
+                // 计算角度和速度
+                const dx = targetX - x;
+                const dy = targetY - y;
+                this.angle = Math.atan2(dy, dx);
+                this.distance = Math.sqrt(dx * dx + dy * dy);
+                this.traveled = 0;
+                
+                // 爆炸属性
+                this.exploded = false;
+                this.particles = [];
+                this.particleCount = createNumber ? 0 : 100; // 如果是数字烟花，先不创建粒子
+            }
+            
+            update() {
+                if (!this.exploded) {
+                    // 烟花上升阶段
+                    this.trail.push({
+                        x: this.x,
+                        y: this.y,
+                        alpha: 1,
+                        size: Math.random() * 2 + 1
+                    });
+                    
+                    // 保持轨迹长度
+                    if (this.trail.length > this.trailLength) {
+                        this.trail.shift();
+                    }
+                    
+                    // 更新轨迹透明度
+                    for (let i = 0; i < this.trail.length; i++) {
+                        this.trail[i].alpha *= 0.9;
+                    }
+                    
+                    // 计算速度
+                    this.speed *= this.acceleration;
+                    const vx = Math.cos(this.angle) * this.speed;
+                    const vy = Math.sin(this.angle) * this.speed;
+                    
+                    this.x += vx;
+                    this.y += vy;
+                    this.traveled = Math.sqrt(
+                        Math.pow(this.x - this.startX, 2) + 
+                        Math.pow(this.y - this.startY, 2)
+                    );
+                    
+                    // 检查是否到达目标位置
+                    if (this.traveled >= this.distance) {
+                        this.exploded = true;
+                        this.explode();
+                    }
+                } else {
+                    // 爆炸后的粒子更新
+                    for (let i = this.particles.length - 1; i >= 0; i--) {
+                        if (!this.particles[i].update()) {
+                            this.particles.splice(i, 1);
+                        }
+                    }
+                }
+            }
+            
+            explode() {
+                if (this.createNumber) {
+                    // 创建形成数字的粒子
+                    this.createNumberParticles();
+                } else {
+                    // 创建随机爆炸粒子
+                    for (let i = 0; i < this.particleCount; i++) {
+                        const particle = new Particle(
+                            this.x, 
+                            this.y, 
+                            this.color, 
+                            0, 0, 
+                            true
+                        );
+                        this.particles.push(particle);
+                    }
+                }
+            }
+            
+            createNumberParticles() {
+                // 数字"2026"的点阵数据
+                // 每个数字由点阵定义，0表示无点，1表示有点
+                const numberPoints = getNumberPoints(2, 0, 2, 6);
+                
+                // 为每个点创建粒子
+                for (let i = 0; i < numberPoints.length; i++) {
+                    const point = numberPoints[i];
+                    const color = getRandomFireworkColor();
+                    
+                    // 每个点创建多个粒子，让它们飞向同一个目标点
+                    const particlesPerPoint = 3;
+                    for (let j = 0; j < particlesPerPoint; j++) {
+                        // 随机起点位置（在爆炸点周围）
+                        const offsetX = (Math.random() - 0.5) * 100;
+                        const offsetY = (Math.random() - 0.5) * 100;
+                        
+                        const particle = new Particle(
+                            this.x + offsetX, 
+                            this.y + offsetY, 
+                            color, 
+                            point.x, 
+                            point.y
+                        );
+                        
+                        this.particles.push(particle);
+                    }
+                }
+                
+                this.particleCount = this.particles.length;
+            }
+            
+            draw() {
+                if (!this.exploded) {
+                    // 绘制烟花轨迹
+                    for (let i = 0; i < this.trail.length; i++) {
+                        const point = this.trail[i];
+                        ctx.save();
+                        ctx.globalAlpha = point.alpha;
+                        ctx.fillStyle = this.color;
+                        ctx.beginPath();
+                        ctx.arc(point.x, point.y, point.size, 0, Math.PI * 2);
+                        ctx.fill();
+                        ctx.restore();
+                    }
+                    
+                    // 绘制烟花头
+                    ctx.save();
+                    ctx.fillStyle = this.color;
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, 3, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.restore();
+                } else {
+                    // 绘制爆炸粒子
+                    for (let i = 0; i < this.particles.length; i++) {
+                        this.particles[i].draw();
+                    }
+                }
+            }
+        }
+        
+        // 获取随机烟花颜色
+        function getRandomFireworkColor() {
+            const colors = [
+                '#ff5e00', // 橙色
+                '#ffbb00', // 黄色
+                '#00aaff', // 蓝色
+                '#ff00cc', // 粉色
+                '#00ff88', // 绿色
+                '#aa00ff'  // 紫色
+            ];
+            return colors[Math.floor(Math.random() * colors.length)];
+        }
+        
+        // 生成数字点阵数据
+        function getNumberPoints(num1, num2, num3, num4) {
+            const points = [];
+            const canvasWidth = canvas.width;
+            const canvasHeight = canvas.height;
+            
+            // 数字点阵定义 (5x7 点阵)
+            const digitPatterns = {
+                0: [
+                    [1,1,1,1,1],
+                    [1,0,0,0,1],
+                    [1,0,0,0,1],
+                    [1,0,0,0,1],
+                    [1,0,0,0,1],
+                    [1,0,0,0,1],
+                    [1,1,1,1,1]
+                ],
+                2: [
+                    [1,1,1,1,1],
+                    [0,0,0,0,1],
+                    [0,0,0,0,1],
+                    [1,1,1,1,1],
+                    [1,0,0,0,0],
+                    [1,0,0,0,0],
+                    [1,1,1,1,1]
+                ],
+                6: [
+                    [1,1,1,1,1],
+                    [1,0,0,0,0],
+                    [1,0,0,0,0],
+                    [1,1,1,1,1],
+                    [1,0,0,0,1],
+                    [1,0,0,0,1],
+                    [1,1,1,1,1]
+                ]
+            };
+            
+            // 获取要显示的数字
+            const digits = [num1, num2, num3, num4];
+            const digitWidth = 40; // 每个数字的宽度
+            const digitHeight = 56; // 每个数字的高度
+            const spacing = 30; // 数字之间的间距
+            
+            // 计算起始X位置使数字居中
+            const totalWidth = (digitWidth * 4) + (spacing * 3);
+            const startX = (canvasWidth - totalWidth) / 2;
+            const centerY = canvasHeight / 2;
+            
+            // 为每个数字生成点
+            for (let d = 0; d < digits.length; d++) {
+                const digit = digits[d];
+                const pattern = digitPatterns[digit];
+                
+                if (!pattern) continue;
+                
+                // 计算数字的起始位置
+                const digitStartX = startX + (d * (digitWidth + spacing));
+                
+                // 遍历点阵，为每个点创建坐标
+                for (let row = 0; row < pattern.length; row++) {
+                    for (let col = 0; col < pattern[row].length; col++) {
+                        if (pattern[row][col] === 1) {
+                            // 计算点的位置
+                            const x = digitStartX + (col * (digitWidth / pattern[row].length));
+                            const y = centerY - (digitHeight / 2) + (row * (digitHeight / pattern.length));
+                            
+                            points.push({x, y});
+                        }
+                    }
+                }
+            }
+            
+            return points;
+        }
+        
+        // 烟花数组
+        let fireworks = [];
+        
+        // 创建随机烟花
+        function createRandomFirework() {
+            const startX = Math.random() * canvas.width;
+            const targetX = Math.random() * (canvas.width - 100) + 50;
+            const targetY = Math.random() * (canvas.height / 2) + 50;
+            const color = getRandomFireworkColor();
+            
+            fireworks.push(new Firework(
+                startX, 
+                canvas.height, 
+                targetX, 
+                targetY, 
+                color,
+                false
+            ));
+        }
+        
+        // 创建形成2026的烟花
+        function create2026Firework() {
+            const startX = canvas.width / 2;
+            const targetX = canvas.width / 2;
+            const targetY = canvas.height / 2;
+            const color = getRandomFireworkColor();
+            
+            fireworks.push(new Firework(
+                startX, 
+                canvas.height, 
+                targetX, 
+                targetY, 
+                color,
+                true
+            ));
+        }
+        
+        // 清除所有烟花
+        function clearAllFireworks() {
+            fireworks = [];
+        }
+        
+        // 动画循环
+        function animate() {
+            // 清除画布，使用半透明黑色创建拖尾效果
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // 更新和绘制所有烟花
+            for (let i = fireworks.length - 1; i >= 0; i--) {
+                fireworks[i].update();
+                fireworks[i].draw();
+                
+                // 如果烟花已经爆炸并且所有粒子都消失了，移除烟花
+                if (fireworks[i].exploded && fireworks[i].particles.length === 0) {
+                    fireworks.splice(i, 1);
+                }
+            }
+            
+            // 随机生成一些烟花
+            if (Math.random() < 0.05 && fireworks.length < 10) {
+                createRandomFirework();
+            }
+            
+            requestAnimationFrame(animate);
+        }
+        
+        // 初始化
+        function init() {
+            // 初始创建几个烟花
+            for (let i = 0; i < 3; i++) {
+                setTimeout(() => {
+                    createRandomFirework();
+                }, i * 500);
+            }
+            
+            // 2秒后创建2026烟花
+            setTimeout(() => {
+                create2026Firework();
+            }, 2000);
+            
+            // 开始动画
+            animate();
+            
+            // 添加点击事件
+            canvas.addEventListener('click', function(e) {
+                if (Math.random() > 0.5) {
+                    createRandomFirework();
+                } else {
+                    create2026Firework();
+                }
+            });
+            
+            // 添加按钮事件
+            document.getElementById('btn2026').addEventListener('click', create2026Firework);
+            document.getElementById('btnRandom').addEventListener('click', createRandomFirework);
+            document.getElementById('btnClear').addEventListener('click', clearAllFireworks);
+        }
+        
+        // 页面加载完成后初始化
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>
