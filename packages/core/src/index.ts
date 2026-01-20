@@ -1,4 +1,4 @@
-import { h } from './render'
+import { h, reactiveRender } from './render'
 export { signal, computed, effect } from './reactivity'
 export { render, reactiveRender, h } from './render'
 
@@ -129,3 +129,19 @@ function compileTemplateJS(input: string) {
 }
 
 export type { RustSignal }
+
+// 小而新的 API：类 Vue 的 createApp，封装 reactiveRender，简化用户使用。
+export function createApp(view: () => any) {
+  return {
+    mount(container: HTMLElement | string | null | undefined) {
+      const el =
+        typeof container === 'string'
+          ? (document.querySelector(container) as HTMLElement | null)
+          : (container as HTMLElement | null)
+      if (!el) {
+        throw new Error('[selene] mount target not found')
+      }
+      reactiveRender(view, el)
+    },
+  }
+}

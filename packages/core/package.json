@@ -1,6 +1,6 @@
 {
     "name": "@selene/core",
-    "version": "0.0.1",
+    "version": "0.1.0",
     "type": "module",
     "main": "./dist/index.js",
     "module": "./dist/index.js",
@@ -15,6 +15,26 @@
       "dist",
       "src/rust"
     ],
+    "repository": {
+      "type": "git",
+      "url": "git+https://github.com/<your-username>/SeleneJS.git"
+    },
+    "homepage": "https://github.com/<your-username>/SeleneJS#readme",
+    "bugs": {
+      "url": "https://github.com/<your-username>/SeleneJS/issues"
+    },
+    "license": "MIT",
+    "keywords": [
+      "frontend",
+      "reactivity",
+      "signals",
+      "wasm",
+      "rust",
+      "ui-framework"
+    ],
+    "publishConfig": {
+      "access": "public"
+    },
     "devDependencies": {
       "tsup": "^8.0.0",
       "typescript": "^5.0.0",
