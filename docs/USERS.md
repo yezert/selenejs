@@ -7,15 +7,24 @@ SeleneJS 是一个轻量的前端 UI 框架实验项目，提供：
 
 > 适用场景：学习/实验、小型 demo、探索 “Rust/WASM 编译器 + JS runtime” 的组合。
 
-## 快速上手
+## 用法模式总览
 
-### 1) 创建状态
+SeleneJS 提供两种常见“模式”：
+
+- **纯 JS 模式**：只用 `signal / effect / h / createApp`，不关心 Rust/WASM，跟普通 JS 框架一样简单。
+- **Rust 增强模式**：在 JS 模式基础上，选择性使用 Rust 编译器和 Rust signal，获得更高性能或更多能力。
+
+下面先看 JS 模式，再看如何在实际项目中“打开 Rust 按钮”。
+
+## 1. JS 模式（最简单的用法）
+
+### 1.1 创建状态
 
 - `signal(initial)`：创建可变状态
 - `effect(fn)`：自动追踪依赖并在变化时重新执行
 - `computed(fn)`：派生值
 
-### 2) 渲染（两种方式）
+### 1.2 渲染（两种方式）
 
 #### 方式 A：直接用 `h` 写 UI（推荐初学）
 
@@ -27,14 +36,61 @@ SeleneJS 是一个轻量的前端 UI 框架实验项目，提供：
 - `compileTemplate(templateString)` 返回一个 JS 函数源码字符串（例如 `() => h(...)`）
 - 你可以用 `new Function(...)` 将其转成真正的渲染函数（示例里演示了如何把 `h/Fragment` 注入进去）
 
-> 注意：模板里包含 `${...}` 时，会以 JS 模板字符串形式保留；要实现真正的“响应式模板”，需要确保在渲染函数执行时读取信号值。
+> 注意：模板里包含 `${...}` 时，需要写成 `\${...}` 才会在编译后在运行时读取信号值。
 
-## 示例：计数器
+### 1.3 `createApp`：更贴合 JS 思维的挂载方式
+
+```js
+import { signal, h, createApp } from '@selene/core'
+
+const count = signal(0)
+
+const App = () =>
+  h('div', { class: 'counter' }, [
+    h('p', {}, `Count: ${count.value}`),
+    h('button', { onClick: () => count.value++ }, 'Increment'),
+  ])
+
+createApp(App).mount('#app')
+```
+
+## 2. Rust 增强模式：在 JS 代码里“开 Rust”
+
+可以在“正常 JS 写法”的基础上，按需引入 Rust 能力：
+
+### 2.1 Rust 信号（createRustSignal）
+
+```js
+import { signal, createRustSignal, effect } from '@selene/core'
+
+const jsCount = signal(0)
+
+async function main() {
+  // Rust 实现的 Signal（内部在 WASM 里维护值）
+  const rustCount = await createRustSignal(0)
+
+  effect(() => {
+    console.log('jsCount =', jsCount.value)
+  })
+
+  // Rust signal 直接用 .value 读写
+  rustCount.value = 1
+  console.log('rustCount =', rustCount.value)
+}
+
+main()
+```
+
+特点：
+- API 与 JS `signal` 完全一致（`.value` 读写），只是实现搬到 Rust/WASM。
+- 你可以把热点状态迁移到 Rust，用 JS 做壳和 UI。
+
+### 2.2 Rust 模板编译（compileTemplate）
 
 `examples/basic/src/main.js` 展示了：
-- 使用 `compileTemplate` 编译模板
-- 使用 `reactiveRender` 自动更新
-- 使用事件委托（`data-action`）绑定点击逻辑
+- 使用 `compileTemplate`（Rust/WASM 优先，JS 为后备）把模板编成 `() => h(...)` 的函数源码
+- 用 `new Function('h','Fragment','count','name', ...)` 把源码变成真正的渲染函数
+- 用 `createApp(() => Counter())` 做挂载和自动更新
 
 ---
 

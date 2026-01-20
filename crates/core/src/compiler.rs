@@ -274,8 +274,8 @@ impl<'a> Parser<'a> {
             if self.eof() || self.starts_with(">") || self.starts_with("/>") {
                 break;
             }
-            let name = self.parse_attr_name();
-            if name.is_empty() {
+            let raw_name = self.parse_attr_name();
+            if raw_name.is_empty() {
                 // Skip one char to avoid infinite loop on junk
                 self.bump_char();
                 continue;
@@ -285,9 +285,11 @@ impl<'a> Parser<'a> {
                 self.i += 1;
                 self.skip_ws();
                 let val = self.parse_attr_value();
-                attrs.push((name, val));
+                let norm = normalize_attr_name(&raw_name);
+                attrs.push((norm, val));
             } else {
-                attrs.push((name, AttrValue::BoolTrue));
+                let norm = normalize_attr_name(&raw_name);
+                attrs.push((norm, AttrValue::BoolTrue));
             }
         }
         attrs
@@ -366,6 +368,26 @@ impl<'a> Parser<'a> {
             self.bump_char();
         }
         out
+    }
+}
+
+fn normalize_attr_name(name: &str) -> String {
+    // React 风格：onClick
+    // Vue 风格：on:click / @click
+    if let Some(rest) = name.strip_prefix("on:") {
+        return format!("on{}", capitalize(rest));
+    }
+    if let Some(rest) = name.strip_prefix('@') {
+        return format!("on{}", capitalize(rest));
+    }
+    name.to_string()
+}
+
+fn capitalize(s: &str) -> String {
+    let mut chars = s.chars();
+    match chars.next() {
+        None => String::new(),
+        Some(first) => first.to_uppercase().collect::<String>() + chars.as_str(),
     }
 }
 

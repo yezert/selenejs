@@ -9,6 +9,7 @@
 - `computed(fn)` — 基于 signal 的派生值，只有在依赖变更时重新计算。
 - `h(tagOrComponent, props, ...children)` — 创建 VNode。用于手写渲染函数或编译产物。
 - `reactiveRender(fn, container)` — 自动追踪 `fn` 中访问的信号，渲染返回的 VNode 到 `container`。
+- `createApp(view)` — 类 Vue 的 API，封装了 `reactiveRender`，通过 `.mount('#app')` 挂载。
 
 ## 模板编译器（compileTemplate）
 
@@ -24,6 +25,7 @@ const render = new Function('h','Fragment','count', `return (${src});`)(h, Fragm
 ## 其它工具 / utilities
 
 - `Fragment` — 多根节点占位符（用于编译输出中的多根）
+- `createRustSignal(initialValue)` — 使用 Rust/WASM 实现的 Signal（异步，返回 Promise）。
 
 ## 注意 / Notes
 

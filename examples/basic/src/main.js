@@ -2,43 +2,42 @@
 import {
   signal,
   effect,
-  h,
-  reactiveRender,
   computed,
+  h,
   compileTemplate,
   Fragment,
+  createApp,
+  createRustSignal,
 } from '@selene/core'
 
-// 创建响应式状态
+// 1. 创建响应式状态
 const count = signal(0)
 const name = signal('World')
-// 触发重新渲染用：当 Counter 从占位函数切换为编译产物时 bump 一下
-const templateVersion = signal(0)
 
-// 使用编译器：将模板编译为渲染函数（返回 VNode）
+// 2. 使用编译器，把模板编译成渲染函数
+const templateVersion = signal(0) // 仅用于触发重新渲染
 let Counter = () => h('div', { class: 'counter' }, 'Compiling template...')
 
-// 编译阶段（异步）：只做一次
-;(async () => {
+async function setupCompiledCounter() {
   const tpl = `
   <div class="counter">
     <h1>Hello, \${name.value}!</h1>
     <p>Count: \${count.value}</p>
     <div class="actions">
-      <button data-action="inc">Increment</button>
-      <button data-action="reset">Reset</button>
+      <button onClick="{() => count.value++}">Increment</button>
+      <button onClick="{() => (count.value = 0)}">Reset</button>
     </div>
   </div>
   `
 
-  // 编译器输出：`() => h(...)` 的函数源代码字符串
   let compiled = null
   try {
     compiled = await compileTemplate(tpl)
   } catch (e) {
-    compiled = null
     console.error('compileTemplate failed:', e)
+    compiled = null
   }
+
   if (!compiled) {
     Counter = () =>
       h('div', { class: 'counter' }, 'Compile failed (see console).')
@@ -46,7 +45,7 @@ let Counter = () => h('div', { class: 'counter' }, 'Compiling template...')
     return
   }
 
-  // 让生成的函数能访问到 h/Fragment（多根节点时会用到 Fragment）
+  // 让编译后的函数可以访问 h / Fragment / 信号
   // eslint-disable-next-line no-new-func
   Counter = new Function(
     'h',
@@ -55,41 +54,38 @@ let Counter = () => h('div', { class: 'counter' }, 'Compiling template...')
     'name',
     `return (${compiled});`
   )(h, Fragment, count, name)
-  // 触发 reactiveRender 重新执行一次（否则会一直停留在占位 UI）
+
+  // 触发视图刷新（依赖 templateVersion 的地方会重新执行）
   templateVersion.value++
+}
 
-  // 绑定一次事件（事件委托，避免每次渲染重复绑定）
-  const app = document.getElementById('app')
-  if (app && !app._selene_events_attached) {
-    app.addEventListener('click', (e) => {
-      const t = e.target
-      if (!(t instanceof Element)) return
-      if (t.matches('[data-action="inc"]')) count.value++
-      if (t.matches('[data-action="reset"]')) count.value = 0
-    })
-    app._selene_events_attached = true
-  }
-})()
+setupCompiledCounter()
 
-// 响应式渲染：依赖变化时自动重新渲染
-reactiveRender(() => {
-  // 让 reactiveRender 依赖这个 signal，从而在模板编译完成时刷新 UI
-  templateVersion.value
+// 3. 使用 createApp 简化挂载逻辑
+createApp(() => {
+  templateVersion.value // 依赖，模板完成编译后会刷新
   return Counter()
-}, document.getElementById('app'))
+}).mount('#app')
 
 // 调试日志
 effect(() => {
   console.log('Count changed:', count.value)
 })
 
-// 测试：每秒自动更新一次
-setTimeout(() => {
-  name.value = 'Selene'
-}, 1000)
-
 // 计算属性示例
 const doubled = computed(() => count.value * 2)
 effect(() => {
   console.log('Doubled:', doubled.value)
 })
+
+// 4. RustSignal 示例：在控制台定期打印 Rust 侧计数
+async function demoRustSignal() {
+  const rustSignal = await createRustSignal(0)
+  console.log('RustSignal initial =', rustSignal.value)
+  setInterval(() => {
+    rustSignal.value++
+    console.log('RustSignal value =', rustSignal.value)
+  }, 1000)
+}
+
+demoRustSignal()
