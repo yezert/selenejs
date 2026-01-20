@@ -36,6 +36,70 @@ SeleneJS 是一个轻量的前端 UI 框架实验项目，提供：
 - 使用 `reactiveRender` 自动更新
 - 使用事件委托（`data-action`）绑定点击逻辑
 
+---
+
+## 安装与运行（Installation & Run）
+
+1) 开发环境（推荐）
+
+```bash
+# 安装依赖
+pnpm install
+
+# 在需要时构建 packages（或使用 monorepo 的脚本）
+pnpm -w build
+```
+
+2) 运行示例（本地查看）：
+
+```bash
+cd examples/basic
+python3 -m http.server 8000
+# 或
+npx http-server -c-1 -p 8000
+```
+
+3) 打包/发布（示意）
+
+```bash
+# 各 package 的打包命令参考 packages/*/package.json
+pnpm -w build
+# 然后按需发布到 npm
+pnpm -w publish --access public
+```
+
+---
+
+## English Quick Start
+
+1) Install deps:
+
+```bash
+pnpm install
+pnpm -w build
+```
+
+2) Serve the basic example:
+
+```bash
+cd examples/basic
+python3 -m http.server 8000
+# or
+npx http-server -c-1 -p 8000
+```
+
+Open `http://localhost:8000` and edit `examples/basic/src/main.js` to iterate.
+
+---
+
+## FAQ（补充）
+
+Q: 我应该什么时候构建 WASM？
+A: 仅在你修改或依赖 Rust 端的逻辑时需要构建；普通前端开发只需运行 JS 的构建流程并打开 `examples/` 即可。
+
+Q: 如何把示例改为加载 `dist`？
+A: 把 `examples/basic/index.html` 中的 `<script src="/src/main.js">` 替换为指向打包好的 `dist` 文件（例如 `/dist/index.js`）并确保静态服务器能提供 `dist` 目录。
+
 ## 与其他框架对比：这个项目的优势
 
 - **相对 React**
@@ -61,4 +125,28 @@ SeleneJS 是一个轻量的前端 UI 框架实验项目，提供：
 
 ### Q: 浏览器/Node 都能用吗？
 可以。`@selene/core` 构建时会把 wasm 资源复制到 `dist/rust`，让打包后运行时能正确找到 wasm。
+
+---
+
+## English translations & Quick Start
+
+### What is SeleneJS?
+SeleneJS is a minimal experimental UI framework combining a JS runtime (signals, effects, rendering) with an optional Rust/WASM template compiler.
+
+### Quick Start (Run the basic example)
+1. Open a terminal and serve `examples/basic` as static files:
+
+```bash
+cd examples/basic
+python3 -m http.server 8000
+# or
+npx http-server -c-1 -p 8000
+```
+
+2. Open `http://localhost:8000` in your browser and inspect the example. `examples/basic/index.html` loads the unbundled source via `<script type="module" src="/src/main.js">` so you can iterate on `examples/basic/src/main.js` directly.
+
+### Notes
+- `compileTemplate` currently returns function source code (string). Example demonstrates turning that string into a callable function via `new Function(...)`. Future improvements aim to produce ESM artifacts to avoid runtime `eval`.
+- For packaging and production builds, follow the build scripts in `packages/*/package.json` and ensure any wasm artifacts are copied into `dist/rust`.
+
 

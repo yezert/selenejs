@@ -74,3 +74,107 @@
   - **优势**：同样是 compiler-first 的方向；Rust/WASM 可能在跨平台编译上更有想象空间
   - **劣势/待补**：Svelte 的“无 runtime/极小 runtime”与编译产物质量，目前仍是目标而非现状
 
+---
+
+## 本文件包含（快速导航）
+- 项目简介与目标（中/EN）
+- 本地开发与构建流程（含 WASM 构建）
+- 发布/打包注意事项
+- 代码结构与包说明
+
+（若需更详细 API，请参见 `docs/API.md`；示例请见 `docs/EXAMPLES.md`）
+
+---
+
+## 本地开发（详细步骤 / Local dev steps）
+
+1. 克隆仓库并安装依赖：
+
+```bash
+git clone <repo-url>
+cd SeleneJS
+pnpm install
+```
+
+2. 运行 TypeScript/JS 构建（若要 watch）：
+
+```bash
+pnpm --filter packages/core dev
+# 或者参考各 package 的 package.json scripts
+```
+
+3. 构建/调试 Rust -> WASM（可选，仅在需要编译器/wasm 功能时）
+
+```bash
+# 以 crates/core 为例，具体 build 流程视项目设置而定
+cd crates/core
+cargo build --release --target wasm32-unknown-unknown
+# 若需要 wasm-bindgen 或 wasm-pack，请在此基础上运行相应命令
+```
+
+4. 将 wasm 复制到 runtime 可访问位置（示例项目使用 packages/core/scripts/copy-rust.mjs）：
+
+```bash
+node packages/core/scripts/copy-rust.mjs
+```
+
+5. 本地查看示例（在 `examples/basic` 下启动静态服务器）：
+
+```bash
+cd examples/basic
+python3 -m http.server 8000
+# 或者
+npx http-server -c-1 -p 8000
+```
+
+---
+
+## 发布/打包注意（Release notes / Packaging hints）
+
+- 确保 wasm artifacts 被复制到 `dist/rust`，并在构建后校验静态文件是否随包一起发布。
+- 若希望发布单独的 `@selene/compiler` 包，请在发布前把 compileTemplate 的 Node/Browser 入口与 wasm binding 明确分离。
+
+---
+
+更多细节与贡献指南见 `docs/CONTRIBUTING.md`。
+---
+
+## English translations & quick reference
+
+### English summary
+This repository implements a small JS runtime plus an optional Rust/WASM compiler. The goal is to explore compiler-first approaches and Rust/WASM integration for template compilation.
+
+### Project layout (quick)
+- `packages/core/`: runtime (`@selene/core`) — reactivity, rendering, JSX glue, wasm helpers
+- `crates/core/`: Rust sources that can compile to WASM (compiler, low-level primitives)
+- `examples/`: runnable demos (see `examples/basic`)
+
+### Design trade-offs
+- Keep runtime minimal; push template-to-renderer work into compiler.
+- Prefer single clear workflow: Rust/WASM compiler + minimal JS runtime; JS fallback only when necessary.
+
+### Quick start for developers
+Prerequisites: `node`, a package manager (pnpm/yarn/npm), and Rust toolchain if you plan to build the WASM artifacts.
+
+Run an example locally (serve static files from `examples/basic`):
+
+```bash
+cd examples/basic
+# using Python http server
+python3 -m http.server 8000
+
+# or using npx http-server
+npx http-server -c-1 -p 8000
+```
+
+Build Rust (optional, for WASM/advanced builds):
+
+```bash
+cd crates/core
+cargo build --release --target wasm32-unknown-unknown
+# Note: additional wasm-bindgen/wasm-pack steps may be required depending on your packaging
+```
+
+Refer to `packages/*/package.json` scripts for JS build steps and `packages/core/scripts/copy-rust.mjs` for wasm copy logic.
+
+
